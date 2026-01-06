@@ -17,11 +17,15 @@ class PowerlawStrategy:
         if position == 0:
             if self.last_direction == "short" and last_close > basis:
                 self.last_direction = "long"
-                print("lower", lower)
-                return "long", lower
+                self.initial_limit = upper
+                return "long", basis
             else:
                 self.last_direction = "short" and last_close < basis
+                self.initial_limit = lower
                 print("short", upper)
-                return "short", upper
+        elif position > 0:
+            if last_close > self.initial_limit:
+                return "movesl", basis
         else:
-            return "idle", 0
+            if last_close < self.initial_limit:
+                return "movesl", basis

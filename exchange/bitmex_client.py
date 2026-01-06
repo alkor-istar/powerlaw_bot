@@ -66,20 +66,17 @@ class BitmexClient(ExchangeClient):
         self, symbol: str, side: str, price: float, orderQty: float
     ) -> None:
         tick_size = self.get_tick_size(symbol)
-        print(
-            "trying to set stop loss", side, round_up(price, tick_size), price, orderQty
+        rounded_price = (
+            round_up(price, tick_size)
+            if side == "Sell"
+            else round_down(price, tick_size)
         )
         self.client.Order.Order_new(
             symbol=symbol,
             ordType="Stop",
             execInst="Close,MarkPrice",
             side=side,
-            stopPx=(
-                91982
-                # side == round_up(price, tick_size)
-                # if side == "Sell"
-                # else round_down(price, tick_size)
-            ),
+            stopPx=rounded_price,
             orderQty=orderQty,
         ).result()
 
