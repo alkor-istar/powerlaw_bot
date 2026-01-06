@@ -37,3 +37,15 @@ class ExchangeClient(ABC):
     @abstractmethod
     def get_last_price(self, symbol: str) -> float:
         pass
+
+    @abstractmethod
+    def get_total_funds(self, symbol: str) -> float:
+        pass
+
+    @abstractmethod
+    def get_tick_size(self, symbol: str) -> float:
+        pass
+
+    @abstractmethod
+    def amend_stop_loss(self, orderID: str, price: float, orderQty: float) -> None:
+        pass
