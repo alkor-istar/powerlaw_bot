@@ -22,7 +22,7 @@ class PowerlawStrategy:
             else:
                 self.last_direction = "short" and last_close < basis
                 self.initial_limit = lower
-                print("short", upper)
+                return "short", basis
         elif position > 0:
             if last_close > self.initial_limit:
                 return "movesl", basis
