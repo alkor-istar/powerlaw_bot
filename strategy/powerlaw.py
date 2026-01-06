@@ -1,6 +1,9 @@
+from indicators.bollinger import bollinger_bands
+
+
 class PowerlawStrategy:
     def __init__(self):
-        self.last_direction = "short"  # first trade is long
+        self.initial_limit = None
 
     def evaluate(self, df, position):
         """
@@ -15,17 +18,49 @@ class PowerlawStrategy:
         inside = lower < last_close < upper
 
         if position == 0:
-            if self.last_direction == "short" and last_close > basis:
+            if last_close > basis:
                 self.last_direction = "long"
                 self.initial_limit = upper
                 return "long", basis
             else:
-                self.last_direction = "short" and last_close < basis
+                last_close < basis
                 self.initial_limit = lower
                 return "short", basis
         elif position > 0:
             if last_close > self.initial_limit:
                 return "movesl", basis
         else:
-            if last_close < self.initial_limit:
+            if not self.initial_limit:
+                print("Account already trading")
+                return "idle", basis
+            if position < 0 and last_close < self.initial_limit:
                 return "movesl", basis
+            elif position > 0 and last_close > self.initial_limit:
+                return "movesl", basis
+            else:
+                return "idle", basis
+
+    def trade(self, exchange, symbol, timeframe, candle_count):
+        df = exchange.get_candles(symbol, timeframe, candle_count)
+        df = bollinger_bands(df)
+
+        position = exchange.get_position_size(symbol)
+        signal, stoploss = self.evaluate(df, position)
+
+        if signal == "long":
+            print("Enter LONG")
+            exchange.long(symbol, 100)
+            sl_order_id = exchange.set_stop_loss(
+                symbol=symbol, side="Sell", price=stoploss, orderQty=100
+            )
+        elif signal == "short":
+            print("Enter SHORT")
+            exchange.short(symbol, 100)
+            sl_order_id = exchange.set_stop_loss(
+                symbol=symbol, side="Buy", price=stoploss, orderQty=100
+            )
+        elif signal == "movesl":
+            print("Move SL")
+            exchange.amend_stop_loss(sl_order_id, stoploss, 100)
+        else:
+            print("Nothing to do")

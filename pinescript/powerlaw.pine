@@ -1,0 +1,97 @@
+//@version=5
+strategy("Power Law Strategy",overlay = true,initial_capital = 100000, default_qty_type = strategy.percent_of_equity, default_qty_value = 100)
+
+// ─────────────────────────────────────────────
+// Inputs
+// ─────────────────────────────────────────────
+bbLength = input.int(10, minval = 1, title = "Bollinger Length")
+bbMult   = input.float(2.0, minval = 0.1, title = "Bollinger Multiplier")
+
+startDate = input.time(timestamp("2025-02-01 00:00"), title = "Start Date")
+endDate   = input.time(timestamp("2026-01-01 00:00"), title = "End Date")
+
+// ─────────────────────────────────────────────
+// Date filter
+// ─────────────────────────────────────────────
+inDateRange = (time >= startDate) and (time <= endDate)
+
+// ─────────────────────────────────────────────
+// Bollinger Bands
+// ─────────────────────────────────────────────
+basis = ta.sma(close, bbLength)
+dev   = bbMult * ta.stdev(close, bbLength)
+
+upperBand = basis + dev
+lowerBand = basis - dev
+
+plot(basis, color=color.orange, title="BB Basis")
+plot(upperBand, color=color.blue, title="BB Upper")
+plot(lowerBand, color=color.blue, title="BB Lower")
+
+// ─────────────────────────────────────────────
+// Entry condition
+// ─────────────────────────────────────────────
+priceInsideBands = close > lowerBand and close < upperBand
+
+var string last = "short" 
+tradeJustClosed = strategy.position_size[1] != 0 and strategy.position_size == 0
+if tradeJustClosed
+    last := last == "long" ? "short" : "long"
+
+enterLong = inDateRange and close > basis and strategy.position_size == 0 
+enterShort = inDateRange and close < basis and strategy.position_size == 0 
+var float initialUpper = na
+
+if enterLong
+    strategy.entry("Long", strategy.long) 
+
+if enterShort
+    strategy.entry("Short", strategy.short) 
+
+// ─────────────────────────────────────────────
+// Stop loss logic
+// ─────────────────────────────────────────────
+var float stopPrice = na
+
+if strategy.position_size > 0
+    if na(stopPrice)
+        stopPrice := basis
+
+    if na(initialUpper)
+        initialUpper := upperBand
+
+    if close > initialUpper
+        stopPrice := basis
+
+
+    strategy.exit("Stop Exit", from_entry="Long", stop=stopPrice)
+
+if strategy.position_size < 0
+    if na(stopPrice)
+        stopPrice := basis
+
+    if na(initialUpper)
+        initialUpper := lowerBand
+
+    if close < initialUpper
+        stopPrice := basis
+
+    strategy.exit("Stop Exit", from_entry="Short", stop=stopPrice)
+
+if strategy.position_size == 0
+    stopPrice := na
+    initialUpper := na
+
+// ─────────────────────────────────────────────
+// Optional visual stop plot
+// ─────────────────────────────────────────────
+plot(strategy.position_size != 0 ? stopPrice : na,
+     title="Trailing Stop (Lower BB)",
+     color=color.red,
+     style=plot.style_linebr)
+
+plot(strategy.position_size != 0 ? initialUpper : na,
+     title="Trailing Stop (Lower BB)",
+     color=color.green,
+     style=plot.style_linebr)
+

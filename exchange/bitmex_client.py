@@ -24,17 +24,17 @@ class BitmexClient(ExchangeClient):
             symbol=symbol, binSize=binSize, count=count, reverse=True, partial=False
         ).result()[0]
 
-        tick_size = self.get_tick_size(symbol)
+        self.tick_size = self.get_tick_size(symbol)
 
         df = pd.DataFrame(
             [
                 {
                     "timestamp": candle["timestamp"],
-                    "open": round_to_tick(candle["open"], tick_size),
-                    "high": round_to_tick(candle["high"], tick_size),
-                    "low": round_to_tick(candle["low"], tick_size),
-                    "close": round_to_tick(candle["close"], tick_size),
-                    "volume": round_to_tick(candle["volume"], tick_size),
+                    "open": round_to_tick(candle["open"], self.tick_size),
+                    "high": round_to_tick(candle["high"], self.tick_size),
+                    "low": round_to_tick(candle["low"], self.tick_size),
+                    "close": round_to_tick(candle["close"], self.tick_size),
+                    "volume": round_to_tick(candle["volume"], self.tick_size),
                 }
                 for candle in data
             ]
@@ -47,14 +47,20 @@ class BitmexClient(ExchangeClient):
         return df
 
     def long(self, symbol: str, qty: float) -> None:
-        self.client.Order.Order_new(
+        response = self.client.Order.Order_new(
             symbol=symbol, side="Buy", ordType="Market", orderQty=qty
         ).result()
+        print("Entered Long: ", response[0]["avgPx"])
+        return response[0]["orderID"]
 
     def short(self, symbol: str, qty: float) -> None:
-        self.client.Order.Order_new(
+        response = self.client.Order.Order_new(
             symbol=symbol, side="Sell", ordType="Market", orderQty=qty
         ).result()
+
+        print("Entered Short: ", response[0]["avgPx"])
+
+        return response[0]["orderID"]
 
     def close_position(self, symbol: str) -> None:
         ammount = self.get_position_size(symbol)
@@ -65,13 +71,12 @@ class BitmexClient(ExchangeClient):
     def set_stop_loss(
         self, symbol: str, side: str, price: float, orderQty: float
     ) -> None:
-        tick_size = self.get_tick_size(symbol)
         rounded_price = (
-            round_up(price, tick_size)
+            round_up(price, self.tick_size)
             if side == "Sell"
-            else round_down(price, tick_size)
+            else round_down(price, self.tick_size)
         )
-        self.client.Order.Order_new(
+        response = self.client.Order.Order_new(
             symbol=symbol,
             ordType="Stop",
             execInst="Close,MarkPrice",
@@ -79,6 +84,17 @@ class BitmexClient(ExchangeClient):
             stopPx=rounded_price,
             orderQty=orderQty,
         ).result()
+
+        print("Set stop loss: ", rounded_price)
+
+        return response[0]["orderID"]
+
+    def amend_stop_loss(self, orderID: str, price: float, orderQty: float):
+        rounded_price = round_to_tick(price, self.tick_size)
+        self.client.Order.Order_amend(
+            orderID=orderID, stopPx=round(rounded_price), orderQty=orderQty
+        ).result()
+        print("Amended stop loss: ", rounded_price)
 
     def get_position_size(self, symbol: str) -> float:
         return self.client.Position.Position_get(
