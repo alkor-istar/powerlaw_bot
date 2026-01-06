@@ -7,7 +7,6 @@ class ExchangeClient(ABC):
     def get_candles(self, symbol: str, binSize: str, count: int):
         pass
 
-
     @abstractmethod
     def long(self, symbol: str, qty: float) -> None:
         pass
@@ -24,8 +23,10 @@ class ExchangeClient(ABC):
     def set_stop_loss(
         self,
         symbol: str,
+        side: str,
         price: float,
-        reduce_only: bool = True
+        orderQty: float,
+        reduce_only: bool = True,
     ) -> None:
         pass
 
