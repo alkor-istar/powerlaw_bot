@@ -2,14 +2,11 @@ from indicators.bollinger import bollinger_bands
 
 
 class PowerlawStrategy:
-    def __init__(self):
+    def __init__(self, logger):
         self.initial_limit = None
+        self.logger = logger
 
     def evaluate(self, df, position):
-        """
-        position: "flat" | "long" | "short"
-        returns: "long" | "short" | "exit" | None
-        """
         last_close = df["close"].iloc[-1]
         upper = df["bb_upper"].iloc[-1]
         lower = df["bb_lower"].iloc[-1]
@@ -31,7 +28,7 @@ class PowerlawStrategy:
                 return "movesl", basis
         else:
             if not self.initial_limit:
-                print("Account already trading")
+                self.logger.log("Account already trading", level=logging.ERROR)
                 return "idle", basis
             if position < 0 and last_close < self.initial_limit:
                 return "movesl", basis
@@ -39,6 +36,8 @@ class PowerlawStrategy:
                 return "movesl", basis
             else:
                 return "idle", basis
+
+        return "idle", basis
 
     def trade(self, exchange, symbol, timeframe, candle_count):
         df = exchange.get_candles(symbol, timeframe, candle_count)
@@ -48,19 +47,19 @@ class PowerlawStrategy:
         signal, stoploss = self.evaluate(df, position)
 
         if signal == "long":
-            print("Enter LONG")
+            self.logger.log("Enter LONG")
             exchange.long(symbol, 100)
-            sl_order_id = exchange.set_stop_loss(
+            self.sl_order_id = exchange.set_stop_loss(
                 symbol=symbol, side="Sell", price=stoploss, orderQty=100
             )
         elif signal == "short":
-            print("Enter SHORT")
+            self.logger.log("Enter SHORT")
             exchange.short(symbol, 100)
-            sl_order_id = exchange.set_stop_loss(
+            self.sl_order_id = exchange.set_stop_loss(
                 symbol=symbol, side="Buy", price=stoploss, orderQty=100
             )
         elif signal == "movesl":
-            print("Move SL")
-            exchange.amend_stop_loss(sl_order_id, stoploss, 100)
+            self.logger.log("Move SL")
+            exchange.amend_stop_loss(self.sl_order_id, stoploss, 100)
         else:
-            print("Nothing to do")
+            self.logger.log("Nothing to do")

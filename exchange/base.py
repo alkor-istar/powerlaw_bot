@@ -49,3 +49,7 @@ class ExchangeClient(ABC):
     @abstractmethod
     def amend_stop_loss(self, orderID: str, price: float, orderQty: float) -> None:
         pass
+
+    @abstractmethod
+    def close_all_positions(self, symbol: str) -> None:
+        pass

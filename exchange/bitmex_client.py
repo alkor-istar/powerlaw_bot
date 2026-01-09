@@ -17,7 +17,6 @@ class BitmexClient(ExchangeClient):
         self.client = bitmex.bitmex(
             test=self.testnet, api_key=self.api_key, api_secret=self.api_secret
         )
-        print("Connected to Bitmex exchange")
 
     def get_candles(self, symbol, binSize, count):
         data = self.client.Trade.Trade_getBucketed(
@@ -115,3 +114,15 @@ class BitmexClient(ExchangeClient):
         instrument = self.client.Instrument.Instrument_get(symbol=symbol).result()[0][0]
 
         return instrument["tickSize"]
+
+    def close_all_positions(self, symbol):
+        position = self.get_position_size(symbol)
+        print(position)
+        if position != 0:
+            self.client.Order.Order_cancelAll(symbol=symbol).result()
+            self.client.Order.Order_new(
+                symbol=symbol,
+                orderQty=-position,
+                ordType="Market",
+                execInst="ReduceOnly",
+            ).result()

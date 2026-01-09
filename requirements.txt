@@ -1,7 +1,0 @@
-bitmex==0.2.2
-bravado==12.0.1
-bravado-core==6.1.1
-dotenv==0.9.9
-pandas==2.3.3
-pandas-ta==0.4.71b0
-python-dotenv==1.2.1
